@@ -10,22 +10,25 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
-mongoose
-  .connect("mongodb://localhost:27017/pizza-delivery")
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.log("❌ MongoDB error:", err));
-
-// Routes - MAKE SURE THESE EXIST
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/inventory", require("./routes/inventory"));
-app.use("/api/orders", require("./routes/orders"));
-app.use("/api/payment", require("./routes/payment"));
-
-// Test route
+// Simple test route
 app.get("/", (req, res) => {
-  res.json({ message: "API is working!" });
+  res.json({ message: "PizzaExpress API is running!" });
 });
+
+// Health check for Render
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// Import routes
+try {
+  app.use("/api/auth", require("./routes/auth"));
+  app.use("/api/inventory", require("./routes/inventory"));
+  app.use("/api/orders", require("./routes/orders"));
+  app.use("/api/payment", require("./routes/payment"));
+} catch (error) {
+  console.log("Route error:", error.message);
+}
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {

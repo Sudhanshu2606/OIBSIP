@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: pizza-express-api
+    runtime: node
+    repo: https://github.com/Sudhanshu2606/OIBSIP
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: MONGODB_URI
+        value: mongodb+srv://pizzaadmin:Pizza@123456@cluster0.xxxxx.mongodb.net/pizza-delivery
+      - key: JWT_SECRET
+        value: mySuperSecretKeyForPizzaApp2024
+      - key: EMAIL_USER
+        value: sudhanshuchourasiya26052005@gmail.com
+      - key: EMAIL_PASS
+        value: sqliojcplmfjjbuy
+      - key: RAZORPAY_KEY_ID
+        value: rzp_test_Szf2yhzNL0P3Wp
+      - key: RAZORPAY_KEY_SECRET
+        value: Jk5VxCtNWNX1JURypyd6tXb2
+      - key: FRONTEND_URL
+        value: https://oibsip-qcof.vercel.app
+      - key: NODE_ENV
+        value: production
