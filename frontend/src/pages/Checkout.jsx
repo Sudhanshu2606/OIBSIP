@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { Container, Row, Col, Card, Button, Form } from "react-bootstrap";
@@ -21,18 +21,15 @@ function Checkout() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Load Razorpay Script
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
 
-  const handlePayment = async () => {
+  const handlePayment = () => {
     if (
       !formData.name ||
       !formData.email ||
@@ -45,15 +42,6 @@ function Checkout() {
 
     setLoading(true);
 
-    // Load Razorpay script
-    const isScriptLoaded = await loadRazorpayScript();
-    if (!isScriptLoaded) {
-      toast.error("Payment gateway failed to load. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // Razorpay Test Key
     const options = {
       key: "rzp_test_Szf2yhzNL0P3Wp",
       amount: cartTotal * 100,
@@ -62,8 +50,14 @@ function Checkout() {
       description: "Pizza Order Payment",
       image:
         "https://cdn.pixabay.com/photo/2017/12/09/08/18/pizza-3007395_640.jpg",
+      // This enables UPI and Indian cards
+      method: {
+        upi: true,
+        card: true,
+        netbanking: true,
+        wallet: true,
+      },
       handler: function (response) {
-        // Payment successful
         const orderId =
           "ORD" + Math.random().toString(36).substr(2, 8).toUpperCase();
         const orders = JSON.parse(localStorage.getItem("orders") || "[]");
@@ -75,24 +69,17 @@ function Checkout() {
           status: "confirmed",
           paymentId: response.razorpay_payment_id,
           deliveryAddress: formData,
-          tracking: {
-            status: "order_placed",
-            steps: [
-              {
-                name: "Order Placed",
-                time: new Date().toISOString(),
-                completed: true,
-              },
-              { name: "Preparing", time: null, completed: false },
-              { name: "Out for Delivery", time: null, completed: false },
-              { name: "Delivered", time: null, completed: false },
-            ],
-          },
         });
         localStorage.setItem("orders", JSON.stringify(orders));
         clearCart();
-        toast.success(`Payment Successful! Order placed!`);
+        toast.success("🎉 Payment Successful! Order placed!");
         navigate(`/track-order/${orderId}`);
+      },
+      modal: {
+        ondismiss: function () {
+          toast.error("Payment cancelled");
+          setLoading(false);
+        },
       },
       prefill: {
         name: formData.name,
@@ -107,12 +94,6 @@ function Checkout() {
       theme: {
         color: "#e31837",
       },
-      modal: {
-        ondismiss: function () {
-          toast.error("Payment cancelled");
-          setLoading(false);
-        },
-      },
     };
 
     const razorpay = new window.Razorpay(options);
@@ -120,9 +101,35 @@ function Checkout() {
     setLoading(false);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    handlePayment();
+  // Direct COD Order
+  const handleCODOrder = () => {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.address
+    ) {
+      toast.error("Please fill all delivery details");
+      return;
+    }
+
+    setLoading(true);
+    const orderId =
+      "COD" + Math.random().toString(36).substr(2, 8).toUpperCase();
+    const orders = JSON.parse(localStorage.getItem("orders") || "[]");
+    orders.unshift({
+      id: orderId,
+      items: cartItems,
+      total: cartTotal,
+      date: new Date().toISOString(),
+      status: "confirmed",
+      deliveryAddress: formData,
+      paymentMethod: "Cash on Delivery",
+    });
+    localStorage.setItem("orders", JSON.stringify(orders));
+    clearCart();
+    toast.success("✅ Order placed! Pay when pizza arrives (COD)");
+    navigate(`/track-order/${orderId}`);
   };
 
   if (cartItems.length === 0) {
@@ -158,7 +165,7 @@ function Checkout() {
             <Card className="shadow-sm">
               <Card.Body>
                 <h4>Delivery Details</h4>
-                <Form onSubmit={handleSubmit}>
+                <Form>
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
@@ -240,17 +247,72 @@ function Checkout() {
                       </Form.Group>
                     </Col>
                   </Row>
+
+                  {/* Payment Options */}
+                  <Card className="mb-3 bg-light">
+                    <Card.Body>
+                      <h6>💳 Payment Options</h6>
+                      <div className="d-flex gap-3 flex-wrap">
+                        <span className="badge bg-primary p-2">
+                          💳 Credit/Debit Card
+                        </span>
+                        <span className="badge bg-success p-2">
+                          📱 UPI (Google Pay, PhonePe)
+                        </span>
+                        <span className="badge bg-info p-2">🏦 Netbanking</span>
+                        <span className="badge bg-warning p-2">
+                          💵 Cash on Delivery
+                        </span>
+                      </div>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Domestic Test Card Details */}
+                  <Card className="mb-3 bg-secondary bg-opacity-10">
+                    <Card.Body>
+                      <h6>🧪 Test Payment Details (Razorpay Test Mode)</h6>
+                      <small>
+                        <strong>Domestic Card:</strong> 4111 1111 1111 1111
+                        <br />
+                        <strong>Expiry:</strong> 12/28 | <strong>CVV:</strong>{" "}
+                        111 | <strong>OTP:</strong> 1111
+                        <br />
+                        <strong>UPI Test ID:</strong> success@razorpay (OTP:
+                        1111)
+                        <br />
+                        <strong>Netbanking:</strong> Select any bank → Login
+                        with "test" → OTP: 1111
+                      </small>
+                    </Card.Body>
+                  </Card>
+
                   <Button
                     variant="danger"
-                    type="submit"
                     size="lg"
-                    className="w-100"
+                    className="w-100 mb-2"
+                    onClick={handlePayment}
                     disabled={loading}
                   >
                     {loading
                       ? "Processing..."
-                      : `Pay ₹${cartTotal} via Razorpay`}
+                      : `💳 Pay ₹${cartTotal} (Card/UPI/Netbanking)`}
                   </Button>
+
+                  <Button
+                    variant="success"
+                    size="lg"
+                    className="w-100"
+                    onClick={handleCODOrder}
+                    disabled={loading}
+                  >
+                    {loading
+                      ? "Processing..."
+                      : `💵 Place COD Order • ₹${cartTotal}`}
+                  </Button>
+
+                  <p className="text-center text-muted mt-3 small">
+                    🔒 Secure payment via Razorpay | Test mode only
+                  </p>
                 </Form>
               </Card.Body>
             </Card>
@@ -275,8 +337,11 @@ function Checkout() {
                 </div>
                 <hr />
                 <small className="text-muted">
-                  🔒 Secure payment via Razorpay. You will be redirected to
-                  payment gateway.
+                  ✅ Free Delivery above ₹499
+                </small>
+                <hr />
+                <small className="text-muted">
+                  🚚 Estimated Delivery: 30-40 mins
                 </small>
               </Card.Body>
             </Card>

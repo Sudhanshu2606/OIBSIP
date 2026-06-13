@@ -11,15 +11,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem("token"));
 
-  const API_URL = "http://localhost:5001";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    delete axios.defaults.headers.common["Authorization"];
-    setToken(null);
-    setUser(null);
-    toast.success("Logged out successfully");
-  };
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const fetchUser = async () => {
     try {
@@ -32,28 +33,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const register = async (name, email, password) => {
-    try {
-      await axios.post(`${API_URL}/api/auth/register`, {
-        name,
-        email,
-        password,
-      });
-      toast.success("Registration successful! Please verify your email.");
-      return true;
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Registration failed");
-      return false;
-    }
+  const logout = () => {
+    localStorage.removeItem("token");
+    delete axios.defaults.headers.common["Authorization"];
+    setToken(null);
+    setUser(null);
+    toast.success("Logged out successfully");
   };
 
   const login = async (email, password) => {
@@ -71,6 +56,21 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
+      return false;
+    }
+  };
+
+  const register = async (name, email, password) => {
+    try {
+      await axios.post(`${API_URL}/api/auth/register`, {
+        name,
+        email,
+        password,
+      });
+      toast.success("Registration successful! Please verify your email.");
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Registration failed");
       return false;
     }
   };

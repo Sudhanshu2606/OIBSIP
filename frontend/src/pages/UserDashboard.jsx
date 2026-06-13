@@ -252,7 +252,7 @@ function UserDashboard() {
 
               {/* User Dropdown */}
               <NavDropdown
-                title={`👋 ${user?.name?.split(" ")[0]}`}
+                title={`👋 ${user?.name || user?.email?.split("@")[0] || "User"}`}
                 id="user-dropdown"
                 align="end"
               >
@@ -267,7 +267,6 @@ function UserDashboard() {
                   🚪 Logout
                 </NavDropdown.Item>
               </NavDropdown>
-
               {/* Admin Panel Button - ONLY visible for admin users */}
               {user?.role === "admin" && (
                 <Button
